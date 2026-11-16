@@ -35,6 +35,35 @@ if (input.variant && input.variant !== 'full') {
 // Lane for a card entering at Ready: the planner's `lane`, else its labels.
 const labelsOf = (card) => (card.labels || []).map((l) => String(l).toLowerCase())
 const readyLane = (card) => card.lane || (labelsOf(card).includes('qa') ? 'qa' : 'build')
+// Specialist routing (fork). A card labelled `area:<name>` is worked by the
+// specialist whose brief lives at .claude/agents/<name>.md; a card labelled
+// `design` gets the architect brief. No matching label = the generic lane.
+// The brief narrows the lane (allowed paths, checks, hand-offs); it never
+// loosens run.md, the merge gate or the guard hooks.
+const specialistOf = (card) => {
+  const labels = labelsOf(card)
+  const area = labels.find((l) => /^area:[a-z0-9][a-z0-9-]*$/.test(l))
+  if (area) return area.slice('area:'.length)
+  if (labels.includes('design')) return 'architect'
+  return null
+}
+const SPECIALIST = (lane, card) => {
+  const name = specialistOf(card)
+  if (!name) return []
+  const lines = [
+    `Specialist: this card is routed to "${name}". Before anything else, read .claude/agents/${name}.md and act as that specialist for the whole ${lane} lane.`,
+    `Its rules (allowed paths, required checks, out-of-scope work) are stricter than this lane's defaults and win where they differ; run.md, the merge gate and the guard hooks still apply in full.`,
+    `If .claude/agents/${name}.md does not exist, say so in detail and continue as the generic ${lane} agent.`,
+  ]
+  if (name === 'architect' && lane === 'build') {
+    lines.push(
+      `Design card: do not implement the feature. Deliver a design PR that adds docs/design/${card.number}-<slug>.md (problem, options, decision, risks, rollout),`,
+      `then file each implementation step as its own issue (Ticket format from writing-standard.md) labelled with its owning area:<name>, linked back to #${card.number}, and add each to the board in Backlog with bash .claude/bin/super-board-issue-sync.sh --issue <N>.`,
+      `List the child issues in the PR body solution block. The design PR then goes through QA and Review like any other card.`
+    )
+  }
+  return lines
+}
 if (input.tier && !['low', 'medium', 'high'].includes(input.tier)) {
   throw new Error(`super-board-wave: unknown tier "${input.tier}" — use low | medium | high`)
 }
@@ -147,6 +176,7 @@ const lanePrompt = (lane, card) => [
   SKILLS_CHECK([card], lane),
   READ_FAILURE,
   `Run ${LANE[lane].skill} on issue #${card.number} ("${card.title}") for a super-board workflow wave.`,
+  ...SPECIALIST(lane, card),
   `Read .claude/skills/super-board/references/run.md → "${LANE[lane].section}" lifecycle and follow it EXACTLY:`,
   `create your own worktree under .claude/worktrees/, work on the issue branch, post the required PR/issue comments,`,
   `move the project card yourself, clean up the worktree on exit. Config: ${input.configPath}.`,
@@ -190,7 +220,7 @@ const runLane = async (lane, card, model, history) => {
     return result
   }
   const r = await agent(lanePrompt(lane, card), {
-    label: `${lane}:#${card.number}`,
+    label: `${lane}${specialistOf(card) ? '/' + specialistOf(card) : ''}:#${card.number}`,
     phase: LANE[lane].phase,
     schema: STAGE_SCHEMA,
     ...(model ? { model } : {}),

@@ -1,0 +1,33 @@
+{
+  "merge_policy": {
+    "default": "human",
+    "auto_max_lines": 400,
+    "always_human": {
+      "guru-path": {
+        "labels": [
+          "area:guru",
+          "guru-quality",
+          "security"
+        ],
+        "paths": [
+          "api/engine/qa/**",
+          "api/controllers/guru_controller.py",
+          "k8s/**",
+          "docker/**",
+          "Dockerfile*"
+        ],
+        "keywords": [
+          "OLLAMA_BASE_URL",
+          "rate_limit",
+          "citation"
+        ]
+      }
+    }
+  },
+  "verify_commands": [
+    "PY=\"$(git rev-parse --path-format=absolute --git-common-dir)/../venv/bin/python\" && \"$PY\" -m pytest tests/unit -q -x",
+    "make lint",
+    "make lint-smells",
+    "cd ui && npm run lint && npx tsc --noEmit"
+  ]
+}

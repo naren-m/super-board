@@ -1,0 +1,8 @@
+{
+  "read_paths": ["tests/eval/heldout/"],
+  "write_patterns": [
+    "OLLAMA_BASE_URL\\s*[=:]\\s*[\"']?https?://",
+    "https?://[^\\s\"'<>]*:11434"
+  ],
+  "reason": "Ramayanam: the held-out eval set is for the eval grader only (run it with SUPER_BOARD_DENY_BYPASS=1), and the Ollama endpoint is a secret (AGENTS.md -> Security)."
+}

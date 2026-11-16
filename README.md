@@ -8,7 +8,7 @@
 
 <p>Stop babysitting coding agents: cards you drop in Ready come back as tested, reviewed PRs.</p>
 
-<p>9 skills (5 you type, 4 the board runs) · 9 commands · 6 guard hooks</p>
+<p>9 skills (5 you type, 4 the board runs) · 9 commands · 7 guard hooks</p>
 
 <p>
 <img alt="Version" src="https://img.shields.io/badge/version-3.3.0-1f883d?style=flat-square">
